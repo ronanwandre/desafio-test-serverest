@@ -1,38 +1,15 @@
 import uuid
 
 from data.usuarios_data import criar_payload_usuario
-
-
-def _extract_id_from_response(resp, api, email=None):
-    try:
-        body = resp.json()
-    except Exception:
-        body = {}
-    user_id = body.get("_id") or body.get("id") or (body.get("usuario") or {}).get("_id")
-    if user_id:
-        return user_id
-    # fallback: procurar pelo email na listagem
-    if email:
-        list_resp = api.get_usuarios()
-        data = list_resp.json()
-        usuarios = data.get("usuarios", data if isinstance(data, list) else [])
-        for u in usuarios:
-            if u.get("email") == email:
-                return u.get("_id") or u.get("id")
-    return None
+from helpers.utils import extract_resource_id, is_error_response
 
 
 def _random_id():
-    # gera um id válido para a API (16 caracteres alfanuméricos)
     return uuid.uuid4().hex[:16]
 
 
 def _assert_api_error_response(body):
-    assert isinstance(body, dict)
-    assert body
-    assert any(key in body for key in ("message", "erro", "error")) or any(
-        isinstance(value, str) and value.strip() for value in body.values()
-    )
+    assert is_error_response(body)
 
 
 def test_listar_usuarios_retorna_200_e_lista(api):
@@ -70,7 +47,7 @@ def test_cadastrar_usuario_com_email_duplicado_retorna_400(api):
     # Arrange
     payload = criar_payload_usuario()
     resp1 = api.post_usuarios(payload)
-    user_id = _extract_id_from_response(resp1, api, payload["email"])
+    user_id = extract_resource_id(resp1.json()) or _random_id()
 
     # Act
     resp2 = api.post_usuarios(payload)
@@ -96,7 +73,7 @@ def test_buscar_usuario_por_id_valido_retorna_200(api):
     # Arrange
     payload = criar_payload_usuario()
     create_resp = api.post_usuarios(payload)
-    user_id = _extract_id_from_response(create_resp, api, payload["email"])
+    user_id = extract_resource_id(create_resp.json())
     assert user_id is not None
 
     # Act
@@ -129,7 +106,7 @@ def test_atualizar_usuario_existente_retorna_200(api):
     # Arrange
     payload = criar_payload_usuario()
     create_resp = api.post_usuarios(payload)
-    user_id = _extract_id_from_response(create_resp, api, payload["email"])
+    user_id = extract_resource_id(create_resp.json())
     assert user_id is not None
     novo_nome = "Nome Atualizado"
     update_payload = {**payload, "nome": novo_nome}
