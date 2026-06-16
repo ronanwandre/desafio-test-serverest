@@ -127,18 +127,18 @@ coverage html  # gera relatório em htmlcov/index.html
 Exemplo mínimo de workflow:
 
 ```yaml
-name: tests
+name: API Test Suite
 on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.10"
       - run: pip install -r requirements.txt
-      - run: pytest -q --disable-warnings
+      - run: pytest -v --html=report.html --self-contained-html
 ```
 
 ## Observações
